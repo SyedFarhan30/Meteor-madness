@@ -1,0 +1,9 @@
+@import "tailwindcss";
+
+:root { color-scheme: dark; }
+html, body, #root { height: 100%; background: #0b1020; }
+
+/* Leaflet tweak on tiny screens */
+@media (max-width: 420px){
+  .leaflet-control-attribution { font-size: 10px; }
+}
