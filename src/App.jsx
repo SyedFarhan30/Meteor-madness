@@ -39,7 +39,8 @@ export default function App(){
         {route === "analysis" && <Analysis />}
 
         <footer className="px-4 py-6 text-xs text-slate-400 border-t border-slate-800">
-          NASA NeoWs / JPL SBDB; USGS EPQS. Physics simplified for education. Verify units before decisions.
+          <p>Designed and Developed  by :</p>
+          <p>Saad Hussain, Farhan Ali, Raza Abbas, Ashir Ali, Muhammad Taha</p>
         </footer>
       </div>
     </AppProvider>
