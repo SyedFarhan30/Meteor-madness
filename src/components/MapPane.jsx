@@ -126,12 +126,18 @@ export function MapPane({ point, onMove, rings, deflectPoint, crater, simPoint }
   },[deflectPoint, simPoint?.lat, simPoint?.lon]);
 
   return (
-    <section className="relative" style={{ minHeight: "50vh" }}>
+    <section className="relative rounded-xl sm:rounded-2xl overflow-hidden shadow-2xl border border-slate-700/50" style={{ minHeight: "40vh", height: "50vh" }}>
       <div id="map-root" className="absolute inset-0" />
-      {/* subtle gradient overlay (non-interactive) */}
+      
+      {/* Enhanced cosmic gradient overlay */}
       <div aria-hidden className="pointer-events-none absolute inset-0
-        bg-[radial-gradient(circle_at_30%_20%,#561744_0%,transparent_40%),radial-gradient(circle_at_80%_60%,#0ea5e9_0%,transparent_35%)]
-        opacity-20" />
+        bg-[radial-gradient(circle_at_30%_20%,rgba(79,70,229,0.1)_0%,transparent_40%),
+            radial-gradient(circle_at_80%_60%,rgba(234,88,12,0.1)_0%,transparent_35%),
+            radial-gradient(circle_at_50%_50%,rgba(139,92,246,0.05)_0%,transparent_50%)]
+        opacity-30" />
+      
+      {/* Map border glow effect */}
+      <div className="absolute inset-0 rounded-xl sm:rounded-2xl border-2 border-transparent bg-gradient-to-r from-purple-500/20 via-blue-500/20 to-purple-500/20 opacity-0 hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
     </section>
   );
 }

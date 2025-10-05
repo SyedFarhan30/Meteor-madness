@@ -72,6 +72,15 @@ export default function Simulator(){
   }
 
   function simulate(){
+    // If diameter is less than 25m, treat as atmospheric burn-up and do not show impact
+    if (dia_m < 25) {
+      setResult({
+        model: impactModel(dia_m, rho, vel_kms, angle_deg),
+        impactPoint: impact,
+        deflection: null
+      });
+      return;
+    }
     const model = impactModel(dia_m, rho, vel_kms, angle_deg);
 
     // Calculate delta V using kinetic impactor system
@@ -108,41 +117,48 @@ export default function Simulator(){
   // on mount: initial elevation
   useEffect(()=>{ updateElevation(impact.lat, impact.lon); },[]);
 
+  // Clear/normalize results when diameter falls below 25m to ensure no impact is shown
+  useEffect(()=>{
+    if (dia_m < 25) {
+      setResult(null);
+    }
+  }, [dia_m]);
+
   return (
-    <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-4 p-2 sm:p-4">
+    <div className="max-w-7xl mx-auto grid grid-cols-1 xl:grid-cols-[400px_1fr] gap-3 sm:gap-4 lg:gap-6 p-2 sm:p-3 lg:p-4">
       {/* Controls */}
-      <section className="space-y-3 sm:space-y-4 order-2 lg:order-1">
+      <section className="space-y-3 sm:space-y-4 order-2 xl:order-1">
         <Panel title="Data">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
-            <Button onClick={loadToday} intent="primary" className="text-xs sm:text-sm">Load Today's NEOs</Button>
-            <Button onClick={()=>{ setAsteroid(sample); setDiaM(sample.est_diameter_m); setVel(sample.velocity_kms); }} className="text-xs sm:text-sm">Use Sample</Button>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+            <Button onClick={loadToday} intent="primary" className="text-xs sm:text-sm">🌌 Load Today's NEOs</Button>
+            <Button onClick={()=>{ setAsteroid(sample); setDiaM(sample.est_diameter_m); setVel(sample.velocity_kms); }} intent="meteor" className="text-xs sm:text-sm">☄️ Use Sample</Button>
           </div>
-          <div className="flex flex-col sm:flex-row gap-2 mt-2">
-            <select value={selectedId} onChange={e=>setSelectedId(e.target.value)} className="flex-1 px-2 py-2 rounded bg-slate-900 border border-slate-700 text-xs sm:text-sm">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mt-3">
+            <select value={selectedId} onChange={e=>setSelectedId(e.target.value)} className="flex-1 px-2 sm:px-3 py-2 rounded bg-slate-900 border border-slate-700 text-xs sm:text-sm">
               <option value="">— pick from feed —</option>
               {feed.map(o=> <option key={o.id} value={o.id}>{o.name} (≈{fmt(o.est_diameter_m)} m)</option>)}
             </select>
             <Button onClick={doLookup} className="text-xs sm:text-sm">Lookup</Button>
           </div>
-          {asteroid && <p className="text-xs text-slate-400 mt-2">Loaded: <b>{asteroid.name}</b> • D≈{fmt(asteroid.est_diameter_m)} m • v≈{fmt(asteroid.velocity_kms)} km/s</p>}
+          {asteroid && <p className="text-xs text-slate-400 mt-3">Loaded: <b>{asteroid.name}</b> • D≈{fmt(asteroid.est_diameter_m)} m • v≈{fmt(asteroid.velocity_kms)} km/s</p>}
         </Panel>
 
         <Panel title="Impact Parameters">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <Label text={<>Diameter (m) <Tooltip label="Projectile diameter at entry."/></>}>
-              <input type="number" value={dia_m} onChange={e=>setDiaM(+e.target.value)} className="w-full px-2 py-2 rounded bg-slate-900 border border-slate-700 text-sm"/>
+              <input type="number" value={dia_m} onChange={e=>setDiaM(+e.target.value)} className="w-full px-2 sm:px-3 py-2 rounded bg-slate-900 border border-slate-700 text-sm"/>
             </Label>
             <Label text={<>Density (kg/m³) <Tooltip label="Use ~3000 kg/m³ for stony, ~7800 for iron."/></>}>
-              <input type="number" value={rho} onChange={e=>setRho(+e.target.value)} className="w-full px-2 py-2 rounded bg-slate-900 border border-slate-700 text-sm"/>
+              <input type="number" value={rho} onChange={e=>setRho(+e.target.value)} className="w-full px-2 sm:px-3 py-2 rounded bg-slate-900 border border-slate-700 text-sm"/>
             </Label>
             <Label text={<>Velocity (km/s) <Tooltip label="Hyperbolic approach speed at impact."/></>}>
-              <input type="number" value={vel_kms} onChange={e=>setVel(+e.target.value)} className="w-full px-2 py-2 rounded bg-slate-900 border border-slate-700 text-sm"/>
+              <input type="number" value={vel_kms} onChange={e=>setVel(+e.target.value)} className="w-full px-2 sm:px-3 py-2 rounded bg-slate-900 border border-slate-700 text-sm"/>
             </Label>
             <Label text={<>Impact angle (°) <Tooltip label="Angle from horizontal; shallow impacts couple less energy."/></>}>
-              <input type="number" value={angle_deg} onChange={e=>setAngle(+e.target.value)} className="w-full px-2 py-2 rounded bg-slate-900 border border-slate-700 text-sm"/>
+              <input type="number" value={angle_deg} onChange={e=>setAngle(+e.target.value)} className="w-full px-2 sm:px-3 py-2 rounded bg-slate-900 border border-slate-700 text-sm"/>
             </Label>
           </div>
-          <p className="text-xs text-slate-400 mt-2">
+          <p className="text-xs text-slate-400 mt-3">
             Click or drag the marker on the map to reposition the impact. US elevation is shown when available.
           </p>
         </Panel>
@@ -198,14 +214,14 @@ export default function Simulator(){
             )}
           </div>
           {dia_m >= 25 && (
-            <Button className="mt-3 w-full" intent="success" onClick={simulate}>Simulate Deflection</Button>
+            <Button className="mt-3 w-full" intent="success" onClick={simulate}>🚀 Simulate Deflection</Button>
           )}
         </Panel>
 
         <Panel title="Results">
           {!result && <p className="text-slate-400 text-sm">Run a simulation to see outputs.</p>}
           {result && result.model.atmospheric_burst && (
-            <div className="p-4 rounded-lg bg-blue-900/20 border border-blue-500/20">
+            <div className="p-3 sm:p-4 rounded-lg bg-blue-900/20 border border-blue-500/20">
               <div className="flex items-center gap-2 mb-2">
                 <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
                 <h4 className="font-medium text-blue-300">Atmospheric Burst Detected</h4>
@@ -222,8 +238,8 @@ export default function Simulator(){
             </div>
           )}
           {result && !result.model.atmospheric_burst && (
-            <div className="grid gap-2">
-              <div className="grid grid-cols-2 gap-2">
+            <div className="grid gap-2 sm:gap-3">
+              <div className="grid grid-cols-2 gap-2 sm:gap-3">
                 <Stat label="Mass (kg)" value={fmt(result.model.mass_kg)} />
                 <Stat label="Energy (KJ)" value={fmt(result.model.energy_J)} />
                 <Stat label="Yield (Mt TNT)" value={fmt(result.model.energy_MtTNT)} />
@@ -239,7 +255,7 @@ export default function Simulator(){
         <Panel title="Damage Zones">
           {!result && <p className="text-slate-400 text-sm">Run a simulation to see impact zones.</p>}
           {result && result.model.atmospheric_burst && (
-            <div className="p-4 rounded-lg bg-blue-900/20 border border-blue-500/20">
+            <div className="p-3 sm:p-4 rounded-lg bg-blue-900/20 border border-blue-500/20">
               <div className="flex items-center gap-2 mb-2">
                 <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
                 <h4 className="font-medium text-blue-300">No Surface Damage</h4>
@@ -251,8 +267,8 @@ export default function Simulator(){
             </div>
           )}
           {result && !result.model.atmospheric_burst && result.model.damage_zones && (
-            <div className="space-y-3">
-              <div className="border border-red-500/20 rounded p-3 bg-red-900/10">
+            <div className="space-y-3 sm:space-y-4">
+              <div className="border border-red-500/20 rounded p-3 sm:p-4 bg-red-900/10">
                 <div className="flex items-center gap-2 mb-2">
                   <div className="w-3 h-3 bg-red-500 rounded-full"></div>
                   <h4 className="font-medium text-red-300">Thermal Radiation Zone</h4>
@@ -263,7 +279,7 @@ export default function Simulator(){
                 <p className="text-sm text-red-200">{result.model.damage_zones.thermal.description}</p>
               </div>
 
-              <div className="border border-orange-500/20 rounded p-3 bg-orange-900/10">
+              <div className="border border-orange-500/20 rounded p-3 sm:p-4 bg-orange-900/10">
                 <div className="flex items-center gap-2 mb-2">
                   <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
                   <h4 className="font-medium text-orange-300">Seismic Wave Zone</h4>
@@ -274,7 +290,7 @@ export default function Simulator(){
                 <p className="text-sm text-orange-200">{result.model.damage_zones.seismic.description}</p>
               </div>
 
-              <div className="border border-green-500/20 rounded p-3 bg-green-900/10">
+              <div className="border border-green-500/20 rounded p-3 sm:p-4 bg-green-900/10">
                 <div className="flex items-center gap-2 mb-2">
                   <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                   <h4 className="font-medium text-green-300">Shock Wave Zone</h4>
@@ -290,7 +306,7 @@ export default function Simulator(){
       </section>
 
       {/* Map */}
-      <div className="order-1 lg:order-2">
+      <div className="order-1 xl:order-2">
         <MapPane
           point={impact}
           onMove={(lat, lon) => { updateElevation(lat, lon); updateImpactPosition(lat, lon); }}

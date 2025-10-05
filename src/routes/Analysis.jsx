@@ -336,16 +336,16 @@ export default function Analysis(){
   }
 
   return (
-    <div className="max-w-5xl mx-auto p-2 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
-      <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold">Advanced Impact Analysis</h1>
+    <div className="max-w-6xl mx-auto p-2 sm:p-3 md:p-4 lg:p-6 space-y-3 sm:space-y-4 lg:space-y-6">
+      <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-semibold text-center sm:text-left">Advanced Impact Analysis</h1>
 
       <Panel title="Meteor Selection">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
-          <Button onClick={loadToday} intent="primary" className="text-xs sm:text-sm">Load Today's NEOs</Button>
-          <Button onClick={()=>{ setSelectedMeteor(sampleMeteor); setDiameterM(sampleMeteor.est_diameter_m); setVelocity(sampleMeteor.velocity_kms); }} className="text-xs sm:text-sm">Use Sample</Button>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 mb-3 sm:mb-4">
+          <Button onClick={loadToday} intent="primary" className="text-xs sm:text-sm">🌌 Load Today's NEOs</Button>
+          <Button onClick={()=>{ setSelectedMeteor(sampleMeteor); setDiameterM(sampleMeteor.est_diameter_m); setVelocity(sampleMeteor.velocity_kms); }} intent="meteor" className="text-xs sm:text-sm">☄️ Use Sample</Button>
         </div>
-        <div className="flex flex-col sm:flex-row gap-2 mb-4">
-          <select value={selectedId} onChange={e=>setSelectedId(e.target.value)} className="flex-1 px-2 py-2 rounded bg-slate-900 border border-slate-700 text-xs sm:text-sm">
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-3 sm:mb-4">
+          <select value={selectedId} onChange={e=>setSelectedId(e.target.value)} className="flex-1 px-2 sm:px-3 py-2 rounded bg-slate-900 border border-slate-700 text-xs sm:text-sm">
             <option value="">— pick from feed —</option>
             {feed.map(o=> <option key={o.id} value={o.id}>{o.name} (≈{fmt(o.est_diameter_m)} m)</option>)}
           </select>
@@ -355,32 +355,32 @@ export default function Analysis(){
       </Panel>
 
       <Panel title="Impact Parameters">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-3 sm:mb-4">
           <Label text="Diameter (m)">
-            <input type="number" value={diameter_m} onChange={e=>setDiameterM(+e.target.value)} className="w-full px-2 py-2 rounded bg-slate-900 border border-slate-700 text-sm"/>
+            <input type="number" value={diameter_m} onChange={e=>setDiameterM(+e.target.value)} className="w-full px-2 sm:px-3 py-2 rounded bg-slate-900 border border-slate-700 text-sm"/>
           </Label>
           <Label text="Density (kg/m³)">
-            <input type="number" value={density_kgm3} onChange={e=>setDensity(+e.target.value)} className="w-full px-2 py-2 rounded bg-slate-900 border border-slate-700 text-sm"/>
+            <input type="number" value={density_kgm3} onChange={e=>setDensity(+e.target.value)} className="w-full px-2 sm:px-3 py-2 rounded bg-slate-900 border border-slate-700 text-sm"/>
           </Label>
           <Label text="Velocity (km/s)">
-            <input type="number" value={velocity_kms} onChange={e=>setVelocity(+e.target.value)} className="w-full px-2 py-2 rounded bg-slate-900 border border-slate-700 text-sm"/>
+            <input type="number" value={velocity_kms} onChange={e=>setVelocity(+e.target.value)} className="w-full px-2 sm:px-3 py-2 rounded bg-slate-900 border border-slate-700 text-sm"/>
           </Label>
           <Label text="Impact angle (°)">
-            <input type="number" value={angle_deg} onChange={e=>setAngle(+e.target.value)} className="w-full px-2 py-2 rounded bg-slate-900 border border-slate-700 text-sm"/>
+            <input type="number" value={angle_deg} onChange={e=>setAngle(+e.target.value)} className="w-full px-2 sm:px-3 py-2 rounded bg-slate-900 border border-slate-700 text-sm"/>
           </Label>
         </div>
         <>
-          <Button onClick={runAnalysis} intent="primary" className="w-full text-sm">Run Comprehensive Analysis</Button>
+          <Button onClick={runAnalysis} intent="primary" className="w-full text-sm">🔬 Run Comprehensive Analysis</Button>
         </>
       </Panel>
 
       <Panel title="Impact Location & Timing">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-3 sm:mb-4">
           <Label text="Famous Cities">
             <select 
               value={selectedCity} 
               onChange={e=>handleCityChange(e.target.value)} 
-              className="w-full px-2 py-2 rounded bg-slate-900 border border-slate-700 text-sm"
+              className="w-full px-2 sm:px-3 py-2 rounded bg-slate-900 border border-slate-700 text-sm"
             >
               {famousCities.map(city => (
                 <option key={city.name} value={city.name}>
@@ -394,13 +394,13 @@ export default function Analysis(){
               type="number" 
               value={days_to_hit_surface} 
               onChange={e=>setDaysToHitSurface(+e.target.value)} 
-              className="w-full px-2 py-2 rounded bg-slate-900 border border-slate-700 text-sm"
+              className="w-full px-2 sm:px-3 py-2 rounded bg-slate-900 border border-slate-700 text-sm"
               min="0"
               max="3650"
             />
           </Label>
         </div>
-        <div className="text-xs text-slate-400 mb-4">
+        <div className="text-xs text-slate-400 mb-3 sm:mb-4">
           Selected: <b>{selectedCity}</b> at {impact_lat.toFixed(4)}°, {impact_lon.toFixed(4)}° 
           {famousCities.find(c => c.name === selectedCity)?.population && 
             ` (Population: ${fmt(famousCities.find(c => c.name === selectedCity).population/1000000, 1)}M)`
@@ -409,11 +409,11 @@ export default function Analysis(){
       </Panel>
 
       <Panel title="Kinetic Impactor System">
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           {diameter_m < 25 ? (
-            <div className="p-4 rounded-lg bg-green-900/20 border border-green-500/20">
-              <h4 className="font-semibold text-green-300 mb-3">No Deflection Needed</h4>
-              <div className="text-sm text-green-200 space-y-2">
+            <div className="p-3 sm:p-4 rounded-lg bg-green-900/20 border border-green-500/20">
+              <h4 className="font-semibold text-green-300 mb-2 sm:mb-3">No Deflection Needed</h4>
+              <div className="text-sm text-green-200 space-y-1 sm:space-y-2">
                 <p>• Meteor diameter: {fmt(diameter_m)} m (less than 25m)</p>
                 <p>• This meteor will burn up in the upper atmosphere</p>
                 <p>• No surface impact is expected</p>
@@ -422,11 +422,11 @@ export default function Analysis(){
               </div>
             </div>
           ) : (
-            <div className="p-4 rounded-lg bg-blue-900/20 border border-blue-500/20">
-              <h4 className="font-semibold text-blue-300 mb-3">Deflection Method: Kinetic Impactor</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <div className="p-3 sm:p-4 rounded-lg bg-blue-900/20 border border-blue-500/20">
+              <h4 className="font-semibold text-blue-300 mb-2 sm:mb-3">Deflection Method: Kinetic Impactor</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 text-sm">
                 <div>
-                  <h5 className="font-medium text-blue-200 mb-2">Impactor Specifications</h5>
+                  <h5 className="font-medium text-blue-200 mb-1 sm:mb-2">Impactor Specifications</h5>
                   <div className="text-blue-100 space-y-1">
                     <p>• Mass: {fmt(getKineticImpactorInfo().mass_kg)} kg</p>
                     <p>• Velocity: {fmt(getKineticImpactorInfo().velocity_ms/1000)} km/s</p>
@@ -435,7 +435,7 @@ export default function Analysis(){
                   </div>
                 </div>
                 <div>
-                  <h5 className="font-medium text-blue-200 mb-2">How It Works</h5>
+                  <h5 className="font-medium text-blue-200 mb-1 sm:mb-2">How It Works</h5>
                   <div className="text-blue-100 space-y-1 text-xs">
                     <p>• High-speed impactor hits meteor</p>
                     <p>• Transfers momentum to deflect trajectory</p>
@@ -449,11 +449,11 @@ export default function Analysis(){
           )}
           
           {diameter_m >= 25 && (
-            <div className="p-4 rounded-lg bg-green-900/20 border border-green-500/20">
-              <h4 className="font-semibold text-green-300 mb-3">Deflection Scenarios</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+            <div className="p-3 sm:p-4 rounded-lg bg-green-900/20 border border-green-500/20">
+              <h4 className="font-semibold text-green-300 mb-2 sm:mb-3">Deflection Scenarios</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 text-sm">
                 <div>
-                  <h5 className="font-medium text-green-200 mb-2">Scenario A (Conservative)</h5>
+                  <h5 className="font-medium text-green-200 mb-1 sm:mb-2">Scenario A (Conservative)</h5>
                   <div className="text-green-100 space-y-1">
                     <p>• Days to hit the surface: 180 days</p>
                     <p>• Calculated Δv: {fmt(scenarioA.dv_mm_s, 3)} mm/s</p>
@@ -461,7 +461,7 @@ export default function Analysis(){
                   </div>
                 </div>
                 <div>
-                  <h5 className="font-medium text-green-200 mb-2">Scenario B (Aggressive)</h5>
+                  <h5 className="font-medium text-green-200 mb-1 sm:mb-2">Scenario B (Aggressive)</h5>
                   <div className="text-green-100 space-y-1">
                     <p>• Days to hit the surface: 365 days</p>
                     <p>• Calculated Δv: {fmt(scenarioB.dv_mm_s, 3)} mm/s</p>
@@ -470,7 +470,7 @@ export default function Analysis(){
                 </div>
                 {customScenario && (
                   <div>
-                    <h5 className="font-medium text-green-200 mb-2">Custom Scenario</h5>
+                    <h5 className="font-medium text-green-200 mb-1 sm:mb-2">Custom Scenario</h5>
                     <div className="text-green-100 space-y-1">
                       <p>• Days to hit the surface: {customScenario.lead_days} days</p>
                       <p>• Calculated Δv: {fmt(customScenario.dv_mm_s, 3)} mm/s</p>
@@ -557,9 +557,9 @@ export default function Analysis(){
               </div>
             )}
             
-            <div className="flex gap-2 mt-4">
-              <Button onClick={downloadExcel} intent="primary">Download Excel Report</Button>
-              <Button onClick={downloadJSON}>Download JSON Data</Button>
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mt-3 sm:mt-4">
+              <Button onClick={downloadExcel} intent="primary" className="flex-1 sm:flex-none">📊 Download Excel Report</Button>
+              <Button onClick={downloadJSON} intent="meteor" className="flex-1 sm:flex-none">📄 Download JSON Data</Button>
             </div>
           </div>
         </Panel>
@@ -596,27 +596,27 @@ export default function Analysis(){
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-[520px] w-full text-sm">
+            <table className="min-w-[600px] w-full text-xs sm:text-sm">
               <thead className="text-left text-slate-300">
                 <tr>
-                  <th className="py-2 pr-4">Mass (kg)</th>
-                  <th className="py-2 pr-4">Energy (KJ)</th>
-                  <th className="py-2 pr-4">Yield (Mt TNT)</th>
-                  <th className="py-2 pr-4">Crater diameter (m)</th>
-                  <th className="py-2 pr-4">Ring severe (km)</th>
-                  <th className="py-2 pr-4">Ring heavy (km)</th>
-                  <th className="py-2 pr-4">Ring light (km)</th>
+                  <th className="py-2 pr-2 sm:pr-4">Mass (kg)</th>
+                  <th className="py-2 pr-2 sm:pr-4">Energy (KJ)</th>
+                  <th className="py-2 pr-2 sm:pr-4">Yield (Mt TNT)</th>
+                  <th className="py-2 pr-2 sm:pr-4">Crater dia (m)</th>
+                  <th className="py-2 pr-2 sm:pr-4">Ring severe (km)</th>
+                  <th className="py-2 pr-2 sm:pr-4">Ring heavy (km)</th>
+                  <th className="py-2 pr-2 sm:pr-4">Ring light (km)</th>
                 </tr>
               </thead>
               <tbody className="border-t border-slate-800">
                 <tr>
-                  <td className="py-2 pr-4">{fmt(physics.mass_kg)}</td>
-                  <td className="py-2 pr-4">{fmt(physics.energy_J)}</td>
-                  <td className="py-2 pr-4">{fmt(physics.energy_MtTNT)}</td>
-                  <td className="py-2 pr-4">{fmt(physics.final_crater_diameter_m)}</td>
-                  <td className="py-2 pr-4">{fmt(physics.rings_km.severe)}</td>
-                  <td className="py-2 pr-4">{fmt(physics.rings_km.heavy)}</td>
-                  <td className="py-2 pr-4">{fmt(physics.rings_km.light)}</td>
+                  <td className="py-2 pr-2 sm:pr-4">{fmt(physics.mass_kg)}</td>
+                  <td className="py-2 pr-2 sm:pr-4">{fmt(physics.energy_J)}</td>
+                  <td className="py-2 pr-2 sm:pr-4">{fmt(physics.energy_MtTNT)}</td>
+                  <td className="py-2 pr-2 sm:pr-4">{fmt(physics.final_crater_diameter_m)}</td>
+                  <td className="py-2 pr-2 sm:pr-4">{fmt(physics.rings_km.severe)}</td>
+                  <td className="py-2 pr-2 sm:pr-4">{fmt(physics.rings_km.heavy)}</td>
+                  <td className="py-2 pr-2 sm:pr-4">{fmt(physics.rings_km.light)}</td>
                 </tr>
               </tbody>
             </table>
@@ -648,15 +648,15 @@ export default function Analysis(){
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-[520px] w-full text-sm">
+            <table className="min-w-[600px] w-full text-xs sm:text-sm">
               <thead className="text-left text-slate-300">
                 <tr>
-                  <th className="py-2 pr-4">Scenario</th>
-                  <th className="py-2 pr-4">Δv (mm/s)</th>
-                  <th className="py-2 pr-4">Days to hit surface</th>
-                  <th className="py-2 pr-4">Along-track shift (m)</th>
-                  <th className="py-2 pr-4">Shifted lat</th>
-                  <th className="py-2 pr-4">Shifted lon</th>
+                  <th className="py-2 pr-2 sm:pr-4">Scenario</th>
+                  <th className="py-2 pr-2 sm:pr-4">Δv (mm/s)</th>
+                  <th className="py-2 pr-2 sm:pr-4">Days to hit surface</th>
+                  <th className="py-2 pr-2 sm:pr-4">Along-track shift (m)</th>
+                  <th className="py-2 pr-2 sm:pr-4">Shifted lat</th>
+                  <th className="py-2 pr-2 sm:pr-4">Shifted lon</th>
                 </tr>
               </thead>
               <tbody className="border-t border-slate-800">
@@ -668,7 +668,7 @@ export default function Analysis(){
           </div>
         )}
 
-        <Button className="mt-4" onClick={downloadJSON}>Download JSON</Button>
+        <Button className="mt-3 sm:mt-4 w-full sm:w-auto" onClick={downloadJSON}>📄 Download JSON</Button>
       </Panel>
     </div>
   );
@@ -685,12 +685,12 @@ function KV({ k, v }){
 function Row({ s }){
   return (
     <tr>
-      <td className="py-2 pr-4">{s.label}</td>
-      <td className="py-2 pr-4">{fmt(s.dv_mm_s)}</td>
-      <td className="py-2 pr-4">{fmt(s.lead_days)}</td>
-      <td className="py-2 pr-4">{fmt(s.along_m)}</td>
-      <td className="py-2 pr-4">{fmt(s.point.lat, 6)}</td>
-      <td className="py-2 pr-4">{fmt(s.point.lon, 6)}</td>
+      <td className="py-2 pr-2 sm:pr-4">{s.label}</td>
+      <td className="py-2 pr-2 sm:pr-4">{fmt(s.dv_mm_s)}</td>
+      <td className="py-2 pr-2 sm:pr-4">{fmt(s.lead_days)}</td>
+      <td className="py-2 pr-2 sm:pr-4">{fmt(s.along_m)}</td>
+      <td className="py-2 pr-2 sm:pr-4">{fmt(s.point.lat, 6)}</td>
+      <td className="py-2 pr-2 sm:pr-4">{fmt(s.point.lon, 6)}</td>
     </tr>
   );
 }
