@@ -41,7 +41,7 @@ export function MapPane({ point, onMove, rings, deflectPoint, crater, simPoint }
 
     // ensure visible even if CSS fails
     const el = document.getElementById("map-root");
-    if (el && !el.style.minHeight) el.style.minHeight = "520px";
+    if (el && !el.style.minHeight) el.style.minHeight = "400px";
   },[]);
 
   // update marker on external move
@@ -126,7 +126,7 @@ export function MapPane({ point, onMove, rings, deflectPoint, crater, simPoint }
   },[deflectPoint, simPoint?.lat, simPoint?.lon]);
 
   return (
-    <section className="relative" style={{ minHeight: "60vh" }}>
+    <section className="relative" style={{ minHeight: "50vh" }}>
       <div id="map-root" className="absolute inset-0" />
       {/* subtle gradient overlay (non-interactive) */}
       <div aria-hidden className="pointer-events-none absolute inset-0

@@ -97,3 +97,59 @@ export function calculateMass(diameter_m, density = 2500) {
   const volume = (4/3) * Math.PI * Math.pow(radius, 3);
   return volume * density;
 }
+
+/**
+ * Kinetic Impactor System
+ * Standard impactor specifications:
+ * - Mass: 1000 kg
+ * - Velocity: 10,000 m/s (10 km/s)
+ * - Energy: ~10^10 J (10 GJ)
+ * - TNT equivalent: ~12 tons
+ */
+const IMPACTOR_MASS = 1000; // kg
+const IMPACTOR_VELOCITY = 10000; // m/s
+const IMPACTOR_ENERGY = 0.5 * IMPACTOR_MASS * IMPACTOR_VELOCITY * IMPACTOR_VELOCITY; // J
+
+/**
+ * Calculate delta V (deflection velocity) using kinetic impactor
+ * @param {number} meteorMass - Mass of the meteor in kg
+ * @param {number} meteorVelocity - Velocity of meteor in m/s
+ * @param {number} leadTimeDays - Days to hit the surface
+ * @param {number} meteorDiameter - Diameter of meteor in meters
+ * @returns {number} Delta V in mm/s
+ */
+export function calculateKineticImpactorDeltaV(meteorMass, meteorVelocity, leadTimeDays, meteorDiameter) {
+  // Impactor effectiveness depends on meteor properties
+  // Larger, slower meteors are easier to deflect
+  const sizeFactor = Math.min(1, meteorDiameter / 100); // Normalize by 100m reference
+  const velocityFactor = Math.max(0.1, 20 / meteorVelocity); // Slower meteors easier to deflect
+  
+  // Mass ratio effect - lighter meteors deflect more
+  const massRatio = IMPACTOR_MASS / meteorMass;
+  const massFactor = Math.min(1, massRatio * 10); // Scale factor
+  
+  // Days to hit surface effect - more time = more deflection
+  const timeFactor = leadTimeDays === 0 ? 0 : Math.min(2, leadTimeDays / 180); // Normalize by 180 days
+  
+  // Base delta V calculation
+  const baseDeltaV = (IMPACTOR_ENERGY / meteorMass) * 1000; // Convert to mm/s
+  
+  // Apply all factors
+  const deltaV = baseDeltaV * sizeFactor * velocityFactor * massFactor * timeFactor;
+  
+  return Math.max(0, deltaV); // Ensure non-negative
+}
+
+/**
+ * Get kinetic impactor information
+ * @returns {object} Impactor specifications
+ */
+export function getKineticImpactorInfo() {
+  return {
+    mass_kg: IMPACTOR_MASS,
+    velocity_ms: IMPACTOR_VELOCITY,
+    energy_J: IMPACTOR_ENERGY,
+    energy_tnt_tons: IMPACTOR_ENERGY / (4.184e9), // Convert to tons TNT
+    description: "Standard kinetic impactor: 1000kg mass, 10km/s velocity, ~12 tons TNT equivalent"
+  };
+}

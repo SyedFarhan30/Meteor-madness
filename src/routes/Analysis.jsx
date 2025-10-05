@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useEffect } from "react";
-import { impactModel, metersToLatLonDelta, fmt } from "../lib/physics.js";
+import { impactModel, metersToLatLonDelta, fmt, calculateKineticImpactorDeltaV, getKineticImpactorInfo } from "../lib/physics.js";
 import { fetchNEOToday, fetchNEOLookup } from "../services/nasa.js";
+import { calculateEarthquakeMagnitude, calculateMMI, getEarthquakeEffects, estimateEarthquakeCasualties, analyzeTsunamiRisk } from "../services/earthquake.js";
 import { Panel } from "../components/Panel.jsx";
 import { Button } from "../components/Button.jsx";
 import { Label } from "../components/Label.jsx";
@@ -24,11 +25,32 @@ export default function Analysis(){
   const [impact_lat, setImpactLat] = useState(24.8607);
   const [impact_lon, setImpactLon] = useState(67.0011);
   const [elevation_m, setElevation] = useState(null);
+  const [days_to_hit_surface, setDaysToHitSurface] = useState(0);
+  const [selectedCity, setSelectedCity] = useState("Karachi");
 
   // Sample fallback meteor
   const sampleMeteor = useMemo(()=>({
     id:"0000", name:"Impactor-2025 (sample)", est_diameter_m:150, velocity_kms:19
   }),[]);
+
+  // Famous cities data
+  const famousCities = [
+    { name: "Karachi", lat: 24.8607, lon: 67.0011, country: "Pakistan", population: 15741000 },
+    { name: "New York", lat: 40.7128, lon: -74.0060, country: "USA", population: 8336817 },
+    { name: "London", lat: 51.5074, lon: -0.1278, country: "UK", population: 8982000 },
+    { name: "Tokyo", lat: 35.6762, lon: 139.6503, country: "Japan", population: 13929286 },
+    { name: "Mumbai", lat: 19.0760, lon: 72.8777, country: "India", population: 12478447 },
+    { name: "Shanghai", lat: 31.2304, lon: 121.4737, country: "China", population: 24870895 },
+    { name: "São Paulo", lat: -23.5505, lon: -46.6333, country: "Brazil", population: 12325232 },
+    { name: "Mexico City", lat: 19.4326, lon: -99.1332, country: "Mexico", population: 9209944 },
+    { name: "Cairo", lat: 30.0444, lon: 31.2357, country: "Egypt", population: 10230350 },
+    { name: "Istanbul", lat: 41.0082, lon: 28.9784, country: "Turkey", population: 15519267 },
+    { name: "Los Angeles", lat: 34.0522, lon: -118.2437, country: "USA", population: 3971883 },
+    { name: "Moscow", lat: 55.7558, lon: 37.6176, country: "Russia", population: 12500000 },
+    { name: "Delhi", lat: 28.7041, lon: 77.1025, country: "India", population: 32941000 },
+    { name: "Beijing", lat: 39.9042, lon: 116.4074, country: "China", population: 21540000 },
+    { name: "Lagos", lat: 6.5244, lon: 3.3792, country: "Nigeria", population: 15388000 }
+  ];
 
   // Compute inputs from state
   const inputs = useMemo(()=>({
@@ -38,8 +60,9 @@ export default function Analysis(){
     angle_deg,
     impact_lat,
     impact_lon,
-    elevation_m
-  }), [diameter_m, density_kgm3, velocity_kms, angle_deg, impact_lat, impact_lon, elevation_m]);
+    elevation_m,
+    days_to_hit_surface
+  }), [diameter_m, density_kgm3, velocity_kms, angle_deg, impact_lat, impact_lon, elevation_m, days_to_hit_surface]);
 
   // Load today's NEOs
   async function loadToday(){
@@ -75,12 +98,24 @@ export default function Analysis(){
 
   // Run comprehensive analysis
   function runAnalysis(){
+    const selectedCityData = famousCities.find(c => c.name === selectedCity);
+    
+    // Earthquake analysis
+    const earthquakeMagnitude = calculateEarthquakeMagnitude(physics.energy_J);
+    const mmi = calculateMMI(earthquakeMagnitude, 0); // At epicenter
+    const earthquakeEffects = getEarthquakeEffects(mmi);
+    const earthquakeCasualties = estimateEarthquakeCasualties(earthquakeMagnitude, selectedCityData?.population || 1000000, 0);
+    
+    // Tsunami analysis
+    const tsunamiAnalysis = analyzeTsunamiRisk(physics.energy_J, inputs.impact_lat, inputs.impact_lon);
+    
     const comprehensive = {
       ...report,
       timestamp: new Date().toISOString(),
       location: {
-        city: "Karachi", // Could be enhanced with geocoding
-        country: "Pakistan",
+        city: selectedCity,
+        country: selectedCityData?.country || "Unknown",
+        population: selectedCityData?.population || 1000000,
         population_affected: calculatePopulationAffected(physics.rings_km.light),
         major_cities_in_blast_radius: getNearbyCities(inputs.impact_lat, inputs.impact_lon, physics.rings_km.light)
       },
@@ -93,7 +128,14 @@ export default function Analysis(){
         infrastructure_damage_estimate_usd: calculateInfrastructureDamage(physics.rings_km),
         evacuation_costs_usd: physics.rings_km.light > 50 ? 1000000000 : physics.rings_km.light > 20 ? 500000000 : 100000000,
         recovery_time_years: physics.energy_MtTNT > 10 ? "10-50" : physics.energy_MtTNT > 5 ? "5-20" : "1-10"
-      }
+      },
+      seismic_impact: {
+        earthquake_magnitude: earthquakeMagnitude,
+        mmi_scale: mmi,
+        earthquake_effects: earthquakeEffects,
+        casualties: earthquakeCasualties
+      },
+      tsunami_impact: tsunamiAnalysis
     };
     
     setAnalysisResults(comprehensive);
@@ -143,28 +185,56 @@ export default function Analysis(){
     impactModel(inputs.diameter_m, inputs.density_kgm3, inputs.velocity_kms, inputs.angle_deg)
   ), [inputs]);
 
-  // Two deflection scenarios
+  // Handle city selection
+  function handleCityChange(cityName) {
+    const city = famousCities.find(c => c.name === cityName);
+    if (city) {
+      setSelectedCity(cityName);
+      setImpactLat(city.lat);
+      setImpactLon(city.lon);
+    }
+  }
+
+  // Two deflection scenarios using kinetic impactor
   const scenarioA = useMemo(()=>{
-    const dv_mm_s = 1;
     const lead_days = 180;
-    const dv_mps = dv_mm_s/1000;         // mm/s -> m/s
+    const meteorMass = physics.mass_kg;
+    const meteorVelocity = inputs.velocity_kms * 1000; // Convert km/s to m/s
+    const calculatedDeltaV = calculateKineticImpactorDeltaV(meteorMass, meteorVelocity, lead_days, inputs.diameter_m);
+    const dv_mps = calculatedDeltaV/1000;         // mm/s -> m/s
     const t_s = lead_days*86400;         // s
     const along_m = dv_mps * t_s;
     const { dLat, dLon } = metersToLatLonDelta(along_m, 0, inputs.impact_lat);
     const point = { lat: inputs.impact_lat + dLat, lon: inputs.impact_lon + dLon };
-    return { label: "A (Δv = 1 mm/s, lead = 180 d)", dv_mm_s, lead_days, along_m, point };
-  }, [inputs]);
+    return { label: "A (Conservative: 180 days to hit surface)", dv_mm_s: calculatedDeltaV, lead_days, along_m, point };
+  }, [inputs, physics]);
 
   const scenarioB = useMemo(()=>{
-    const dv_mm_s = 5;
     const lead_days = 365;
-    const dv_mps = dv_mm_s/1000;
+    const meteorMass = physics.mass_kg;
+    const meteorVelocity = inputs.velocity_kms * 1000; // Convert km/s to m/s
+    const calculatedDeltaV = calculateKineticImpactorDeltaV(meteorMass, meteorVelocity, lead_days, inputs.diameter_m);
+    const dv_mps = calculatedDeltaV/1000;
     const t_s = lead_days*86400;
     const along_m = dv_mps * t_s;
     const { dLat, dLon } = metersToLatLonDelta(along_m, 0, inputs.impact_lat);
     const point = { lat: inputs.impact_lat + dLat, lon: inputs.impact_lon + dLon };
-    return { label: "B (Δv = 5 mm/s, lead = 365 d)", dv_mm_s, lead_days, along_m, point };
-  }, [inputs]);
+    return { label: "B (Aggressive: 365 days to hit surface)", dv_mm_s: calculatedDeltaV, lead_days, along_m, point };
+  }, [inputs, physics]);
+
+  // User's custom deflection scenario
+  const customScenario = useMemo(()=>{
+    if (inputs.days_to_hit_surface === 0) return null;
+    const meteorMass = physics.mass_kg;
+    const meteorVelocity = inputs.velocity_kms * 1000;
+    const calculatedDeltaV = calculateKineticImpactorDeltaV(meteorMass, meteorVelocity, inputs.days_to_hit_surface, inputs.diameter_m);
+    const dv_mps = calculatedDeltaV/1000;
+    const t_s = inputs.days_to_hit_surface*86400;
+    const along_m = dv_mps * t_s;
+    const { dLat, dLon } = metersToLatLonDelta(along_m, 0, inputs.impact_lat);
+    const point = { lat: inputs.impact_lat + dLat, lon: inputs.impact_lon + dLon };
+    return { label: `Custom (${inputs.days_to_hit_surface} days to hit surface)`, dv_mm_s: calculatedDeltaV, lead_days: inputs.days_to_hit_surface, along_m, point };
+  }, [inputs, physics]);
 
   const report = useMemo(()=>({
     inputs,
@@ -230,10 +300,16 @@ export default function Analysis(){
       ["Evacuation costs (USD)", "$" + fmt(analysisResults.economic_impact.evacuation_costs_usd)],
       ["Recovery time", analysisResults.economic_impact.recovery_time_years + " years"],
       [""],
-      ["DEFLECTION SCENARIOS"],
-      ["Scenario", "Δv (mm/s)", "Lead (days)", "Shift (m)", "New lat", "New lon"],
-      ["A (Conservative)", analysisResults.deflection.scenario_A.dv_mm_s, analysisResults.deflection.scenario_A.lead_days, analysisResults.deflection.scenario_A.along_track_m, analysisResults.deflection.scenario_A.shifted_point.lat, analysisResults.deflection.scenario_A.shifted_point.lon],
-      ["B (Aggressive)", analysisResults.deflection.scenario_B.dv_mm_s, analysisResults.deflection.scenario_B.lead_days, analysisResults.deflection.scenario_B.along_track_m, analysisResults.deflection.scenario_B.shifted_point.lat, analysisResults.deflection.scenario_B.shifted_point.lon]
+      ["KINETIC IMPACTOR DEFLECTION SCENARIOS"],
+      ["Scenario", "Days to hit surface", "Calculated Δv (mm/s)", "Shift (m)", "New lat", "New lon"],
+      ["A (Conservative)", analysisResults.deflection.scenario_A.lead_days, analysisResults.deflection.scenario_A.dv_mm_s, analysisResults.deflection.scenario_A.along_track_m, analysisResults.deflection.scenario_A.shifted_point.lat, analysisResults.deflection.scenario_A.shifted_point.lon],
+      ["B (Aggressive)", analysisResults.deflection.scenario_B.lead_days, analysisResults.deflection.scenario_B.dv_mm_s, analysisResults.deflection.scenario_B.along_track_m, analysisResults.deflection.scenario_B.shifted_point.lat, analysisResults.deflection.scenario_B.shifted_point.lon],
+      [""],
+      ["IMPACTOR SPECIFICATIONS"],
+      ["Mass (kg)", getKineticImpactorInfo().mass_kg],
+      ["Velocity (km/s)", getKineticImpactorInfo().velocity_ms/1000],
+      ["Energy (GJ)", getKineticImpactorInfo().energy_J/1e9],
+      ["TNT Equivalent (tons)", getKineticImpactorInfo().energy_tnt_tons]
     ];
 
     // Convert to CSV format
@@ -260,42 +336,152 @@ export default function Analysis(){
   }
 
   return (
-    <div className="max-w-5xl mx-auto p-4 md:p-6 space-y-6">
-      <h1 className="text-2xl md:text-3xl font-semibold">Advanced Impact Analysis</h1>
+    <div className="max-w-5xl mx-auto p-2 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
+      <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold">Advanced Impact Analysis</h1>
 
       <Panel title="Meteor Selection">
-        <div className="grid grid-cols-2 gap-2 mb-4">
-          <Button onClick={loadToday} intent="primary">Load Today's NEOs</Button>
-          <Button onClick={()=>{ setSelectedMeteor(sampleMeteor); setDiameterM(sampleMeteor.est_diameter_m); setVelocity(sampleMeteor.velocity_kms); }} >Use Sample</Button>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
+          <Button onClick={loadToday} intent="primary" className="text-xs sm:text-sm">Load Today's NEOs</Button>
+          <Button onClick={()=>{ setSelectedMeteor(sampleMeteor); setDiameterM(sampleMeteor.est_diameter_m); setVelocity(sampleMeteor.velocity_kms); }} className="text-xs sm:text-sm">Use Sample</Button>
         </div>
-        <div className="flex gap-2 mb-4">
-          <select value={selectedId} onChange={e=>setSelectedId(e.target.value)} className="flex-1 px-2 py-2 rounded bg-slate-900 border border-slate-700">
+        <div className="flex flex-col sm:flex-row gap-2 mb-4">
+          <select value={selectedId} onChange={e=>setSelectedId(e.target.value)} className="flex-1 px-2 py-2 rounded bg-slate-900 border border-slate-700 text-xs sm:text-sm">
             <option value="">— pick from feed —</option>
             {feed.map(o=> <option key={o.id} value={o.id}>{o.name} (≈{fmt(o.est_diameter_m)} m)</option>)}
           </select>
-          <Button onClick={doLookup}>Lookup</Button>
+          <Button onClick={doLookup} className="text-xs sm:text-sm">Lookup</Button>
         </div>
         {selectedMeteor && <p className="text-xs text-slate-400">Selected: <b>{selectedMeteor.name}</b> • D≈{fmt(selectedMeteor.est_diameter_m)} m • v≈{fmt(selectedMeteor.velocity_kms)} km/s</p>}
       </Panel>
 
       <Panel title="Impact Parameters">
-        <div className="grid grid-cols-2 gap-3 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
           <Label text="Diameter (m)">
-            <input type="number" value={diameter_m} onChange={e=>setDiameterM(+e.target.value)} className="w-full px-2 py-2 rounded bg-slate-900 border border-slate-700"/>
+            <input type="number" value={diameter_m} onChange={e=>setDiameterM(+e.target.value)} className="w-full px-2 py-2 rounded bg-slate-900 border border-slate-700 text-sm"/>
           </Label>
           <Label text="Density (kg/m³)">
-            <input type="number" value={density_kgm3} onChange={e=>setDensity(+e.target.value)} className="w-full px-2 py-2 rounded bg-slate-900 border border-slate-700"/>
+            <input type="number" value={density_kgm3} onChange={e=>setDensity(+e.target.value)} className="w-full px-2 py-2 rounded bg-slate-900 border border-slate-700 text-sm"/>
           </Label>
           <Label text="Velocity (km/s)">
-            <input type="number" value={velocity_kms} onChange={e=>setVelocity(+e.target.value)} className="w-full px-2 py-2 rounded bg-slate-900 border border-slate-700"/>
+            <input type="number" value={velocity_kms} onChange={e=>setVelocity(+e.target.value)} className="w-full px-2 py-2 rounded bg-slate-900 border border-slate-700 text-sm"/>
           </Label>
           <Label text="Impact angle (°)">
-            <input type="number" value={angle_deg} onChange={e=>setAngle(+e.target.value)} className="w-full px-2 py-2 rounded bg-slate-900 border border-slate-700"/>
+            <input type="number" value={angle_deg} onChange={e=>setAngle(+e.target.value)} className="w-full px-2 py-2 rounded bg-slate-900 border border-slate-700 text-sm"/>
           </Label>
         </div>
         <>
-          <Button onClick={runAnalysis} intent="primary" className="w-full">Run Comprehensive Analysis</Button>
+          <Button onClick={runAnalysis} intent="primary" className="w-full text-sm">Run Comprehensive Analysis</Button>
         </>
+      </Panel>
+
+      <Panel title="Impact Location & Timing">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+          <Label text="Famous Cities">
+            <select 
+              value={selectedCity} 
+              onChange={e=>handleCityChange(e.target.value)} 
+              className="w-full px-2 py-2 rounded bg-slate-900 border border-slate-700 text-sm"
+            >
+              {famousCities.map(city => (
+                <option key={city.name} value={city.name}>
+                  {city.name}, {city.country} (Pop: {fmt(city.population/1000000, 1)}M)
+                </option>
+              ))}
+            </select>
+          </Label>
+          <Label text="Days to hit the surface">
+            <input 
+              type="number" 
+              value={days_to_hit_surface} 
+              onChange={e=>setDaysToHitSurface(+e.target.value)} 
+              className="w-full px-2 py-2 rounded bg-slate-900 border border-slate-700 text-sm"
+              min="0"
+              max="3650"
+            />
+          </Label>
+        </div>
+        <div className="text-xs text-slate-400 mb-4">
+          Selected: <b>{selectedCity}</b> at {impact_lat.toFixed(4)}°, {impact_lon.toFixed(4)}° 
+          {famousCities.find(c => c.name === selectedCity)?.population && 
+            ` (Population: ${fmt(famousCities.find(c => c.name === selectedCity).population/1000000, 1)}M)`
+          }
+        </div>
+      </Panel>
+
+      <Panel title="Kinetic Impactor System">
+        <div className="space-y-4">
+          {diameter_m < 25 ? (
+            <div className="p-4 rounded-lg bg-green-900/20 border border-green-500/20">
+              <h4 className="font-semibold text-green-300 mb-3">No Deflection Needed</h4>
+              <div className="text-sm text-green-200 space-y-2">
+                <p>• Meteor diameter: {fmt(diameter_m)} m (less than 25m)</p>
+                <p>• This meteor will burn up in the upper atmosphere</p>
+                <p>• No surface impact is expected</p>
+                <p>• Kinetic impactor deflection is not required</p>
+                <p>• The atmospheric resistance will naturally break up the meteor</p>
+              </div>
+            </div>
+          ) : (
+            <div className="p-4 rounded-lg bg-blue-900/20 border border-blue-500/20">
+              <h4 className="font-semibold text-blue-300 mb-3">Deflection Method: Kinetic Impactor</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div>
+                  <h5 className="font-medium text-blue-200 mb-2">Impactor Specifications</h5>
+                  <div className="text-blue-100 space-y-1">
+                    <p>• Mass: {fmt(getKineticImpactorInfo().mass_kg)} kg</p>
+                    <p>• Velocity: {fmt(getKineticImpactorInfo().velocity_ms/1000)} km/s</p>
+                    <p>• Energy: {fmt(getKineticImpactorInfo().energy_J/1e9, 1)} GJ</p>
+                    <p>• TNT Equivalent: {fmt(getKineticImpactorInfo().energy_tnt_tons, 1)} tons</p>
+                  </div>
+                </div>
+                <div>
+                  <h5 className="font-medium text-blue-200 mb-2">How It Works</h5>
+                  <div className="text-blue-100 space-y-1 text-xs">
+                    <p>• High-speed impactor hits meteor</p>
+                    <p>• Transfers momentum to deflect trajectory</p>
+                    <p>• Effectiveness depends on meteor properties</p>
+                    <p>• More days to hit surface = greater deflection</p>
+                    <p>• Larger/slower meteors deflect easier</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {diameter_m >= 25 && (
+            <div className="p-4 rounded-lg bg-green-900/20 border border-green-500/20">
+              <h4 className="font-semibold text-green-300 mb-3">Deflection Scenarios</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+                <div>
+                  <h5 className="font-medium text-green-200 mb-2">Scenario A (Conservative)</h5>
+                  <div className="text-green-100 space-y-1">
+                    <p>• Days to hit the surface: 180 days</p>
+                    <p>• Calculated Δv: {fmt(scenarioA.dv_mm_s, 3)} mm/s</p>
+                    <p>• Deflection: {fmt(scenarioA.along_m/1000, 2)} km</p>
+                  </div>
+                </div>
+                <div>
+                  <h5 className="font-medium text-green-200 mb-2">Scenario B (Aggressive)</h5>
+                  <div className="text-green-100 space-y-1">
+                    <p>• Days to hit the surface: 365 days</p>
+                    <p>• Calculated Δv: {fmt(scenarioB.dv_mm_s, 3)} mm/s</p>
+                    <p>• Deflection: {fmt(scenarioB.along_m/1000, 2)} km</p>
+                  </div>
+                </div>
+                {customScenario && (
+                  <div>
+                    <h5 className="font-medium text-green-200 mb-2">Custom Scenario</h5>
+                    <div className="text-green-100 space-y-1">
+                      <p>• Days to hit the surface: {customScenario.lead_days} days</p>
+                      <p>• Calculated Δv: {fmt(customScenario.dv_mm_s, 3)} mm/s</p>
+                      <p>• Deflection: {fmt(customScenario.along_m/1000, 2)} km</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       </Panel>
 
       {analysisResults && (
@@ -352,6 +538,21 @@ export default function Analysis(){
                   <p className="text-sm"><strong>Infrastructure damage:</strong> ${fmt(analysisResults.economic_impact.infrastructure_damage_estimate_usd)}</p>
                   <p className="text-sm"><strong>Evacuation costs:</strong> ${fmt(analysisResults.economic_impact.evacuation_costs_usd)}</p>
                   <p className="text-sm"><strong>Recovery time:</strong> {analysisResults.economic_impact.recovery_time_years} years</p>
+                </div>
+                
+                <div className="p-4 rounded-lg bg-red-900/20 border border-red-500/20">
+                  <h4 className="font-semibold text-red-300 mb-2">Seismic Impact</h4>
+                  <p className="text-sm"><strong>Earthquake magnitude:</strong> {fmt(analysisResults.seismic_impact.earthquake_magnitude, 1)}</p>
+                  <p className="text-sm"><strong>MMI scale:</strong> {analysisResults.seismic_impact.mmi_scale} ({analysisResults.seismic_impact.earthquake_effects.level})</p>
+                  <p className="text-sm"><strong>Fatalities:</strong> {fmt(analysisResults.seismic_impact.casualties.fatalities)} ({fmt(analysisResults.seismic_impact.casualties.fatalityRate, 2)}%)</p>
+                  <p className="text-sm"><strong>Injuries:</strong> {fmt(analysisResults.seismic_impact.casualties.injuries)} ({fmt(analysisResults.seismic_impact.casualties.injuryRate, 2)}%)</p>
+                </div>
+                
+                <div className="p-4 rounded-lg bg-cyan-900/20 border border-cyan-500/20">
+                  <h4 className="font-semibold text-cyan-300 mb-2">Tsunami Impact</h4>
+                  <p className="text-sm"><strong>Risk level:</strong> {analysisResults.tsunami_impact.risk}</p>
+                  <p className="text-sm"><strong>Height:</strong> {fmt(analysisResults.tsunami_impact.height_m, 1)}m</p>
+                  <p className="text-sm"><strong>Description:</strong> {analysisResults.tsunami_impact.description}</p>
                 </div>
               </div>
             )}
@@ -425,23 +626,23 @@ export default function Analysis(){
 
       <Panel title="Deflection Outcomes">
         {physics.atmospheric_burst ? (
-          <div className="p-4 rounded-lg bg-blue-900/20 border border-blue-500/20">
+          <div className="p-4 rounded-lg bg-green-900/20 border border-green-500/20">
             <div className="flex items-center gap-2 mb-2">
-              <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-              <h4 className="font-semibold text-blue-300">No Deflection Needed</h4>
+              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+              <h4 className="font-semibold text-green-300">No Deflection Needed</h4>
             </div>
-            <p className="text-sm text-blue-200 mb-4">
-              Since this meteor will burst in the upper atmosphere, no deflection is necessary. 
+            <p className="text-sm text-green-200 mb-4">
+              Since this meteor (diameter: {fmt(diameter_m)}m) will burst in the upper atmosphere, no deflection is necessary. 
               The atmospheric resistance will naturally break up the meteor before it can cause any surface damage.
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="p-3 rounded-lg bg-blue-800/20 border border-blue-400/20">
-                <h5 className="font-medium text-blue-300 mb-1">Deflection Required</h5>
-                <p className="text-sm text-blue-200">None</p>
+              <div className="p-3 rounded-lg bg-green-800/20 border border-green-400/20">
+                <h5 className="font-medium text-green-300 mb-1">Deflection Required</h5>
+                <p className="text-sm text-green-200">None - Kinetic impactor not needed</p>
               </div>
-              <div className="p-3 rounded-lg bg-blue-800/20 border border-blue-400/20">
-                <h5 className="font-medium text-blue-300 mb-1">Surface Risk</h5>
-                <p className="text-sm text-blue-200">None</p>
+              <div className="p-3 rounded-lg bg-green-800/20 border border-green-400/20">
+                <h5 className="font-medium text-green-300 mb-1">Surface Risk</h5>
+                <p className="text-sm text-green-200">None - Atmospheric burst</p>
               </div>
             </div>
           </div>
@@ -452,7 +653,7 @@ export default function Analysis(){
                 <tr>
                   <th className="py-2 pr-4">Scenario</th>
                   <th className="py-2 pr-4">Δv (mm/s)</th>
-                  <th className="py-2 pr-4">Lead (days)</th>
+                  <th className="py-2 pr-4">Days to hit surface</th>
                   <th className="py-2 pr-4">Along-track shift (m)</th>
                   <th className="py-2 pr-4">Shifted lat</th>
                   <th className="py-2 pr-4">Shifted lon</th>
@@ -461,6 +662,7 @@ export default function Analysis(){
               <tbody className="border-t border-slate-800">
                 <Row s={scenarioA} />
                 <Row s={scenarioB} />
+                {customScenario && <Row s={customScenario} />}
               </tbody>
             </table>
           </div>
