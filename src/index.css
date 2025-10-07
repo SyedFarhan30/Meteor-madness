@@ -42,63 +42,8 @@ body::before {
 }
 
 /* Meteor shower animation */
-.meteor-shower {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: -1;
-}
-
-.meteor {
-  position: absolute;
-  width: 2px;
-  height: 2px;
-  background: linear-gradient(45deg, transparent, #fbbf24, transparent);
-  border-radius: 50%;
-  animation: meteor-fall 3s linear infinite;
-}
-
-.meteor::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100px;
-  height: 1px;
-  background: linear-gradient(90deg, #fbbf24, transparent);
-  transform: translateX(-100px);
-}
-
-@keyframes meteor-fall {
-  0% {
-    transform: translateX(-100px) translateY(-100px);
-    opacity: 1;
-  }
-  100% {
-    transform: translateX(100vw) translateY(100vh);
-    opacity: 0;
-  }
-}
-
-/* Floating particles */
-.particle {
-  position: fixed;
-  width: 1px;
-  height: 1px;
-  background: rgba(255, 255, 255, 0.3);
-  border-radius: 50%;
-  animation: float 6s ease-in-out infinite;
-  pointer-events: none;
-  z-index: -1;
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0px) translateX(0px); opacity: 0.3; }
-  50% { transform: translateY(-20px) translateX(10px); opacity: 1; }
-}
+/* Meteor/particle background animations removed to improve accessibility and performance.
+   The subtle cosmic-drift background remains active for visual depth. */
 
 @keyframes fadeIn {
   from {
@@ -232,21 +177,7 @@ select option {
 /* Responsive improvements */
 @media (max-width: 640px) {
   /* Mobile-specific adjustments */
-  .meteor {
-    width: 1px;
-    height: 1px;
-  }
-  
-  .meteor::before {
-    width: 50px;
-  }
-  
-  /* Reduce particle count on mobile */
-  .particle {
-    display: none;
-  }
-  
-  /* Mobile-friendly button sizes */
+  /* Keep buttons large enough for touch */
   button {
     min-height: 44px; /* iOS touch target size */
   }
@@ -264,10 +195,6 @@ select option {
 
 @media (max-width: 480px) {
   /* Extra small screens */
-  .meteor-shower {
-    display: none; /* Hide meteors on very small screens for performance */
-  }
-  
   /* Compact spacing */
   .space-y-3 > * + * {
     margin-top: 0.5rem;
